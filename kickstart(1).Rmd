@@ -1,0 +1,164 @@
+---
+title: "kickstarter"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+options(scipen = 999) 
+
+```
+
+
+```{r, echo = FALSE}
+kickstarter$exchange_rate <- ifelse( kickstarter$currency =="AUD",
+0.68766,
+ifelse(kickstarter$currency =="CAD",
+0.75912,
+ifelse(kickstarter$currency =="CHF",
+1.0160,
+ifelse(kickstarter$currency =="DKK",
+0.14877,
+ifelse(kickstarter$currency =="EUR",
+1.1118,
+ifelse(kickstarter$currency =="GBP",
+1.3325,
+ifelse(kickstarter$currency =="HKD",
+0.12819,
+ifelse(kickstarter$currency =="MXN",
+0.05258,
+ifelse (kickstarter$currency =="NOK",
+0.11066,
+ifelse(kickstarter$currency =="NZD",
+0.65997,
+ifelse(kickstarter$currency =="SEK",
+0.10643,
+ifelse(kickstarter$currency =="SGD",
+0.73900,
+1 ))))))))))))
+
+
+```
+
+
+```{r pressure, echo=FALSE}
+kick_euro_to_usd = kickstarter %>% filter(currency == "EUR")
+kick_euro_to_usd$currency = "USD"
+kick_euro_to_usd$pledged = kick_euro_to_usd$pledged * 1.12
+kick_euro_to_usd$goal = kick_euro_to_usd$goal * 1.12
+kick_gbp_to_usd = kickstarter %>% filter(currency == "GBP")
+kick_gbp_to_usd$currency = "USD"
+kick_gbp_to_usd$pledged = kick_gbp_to_usd$pledged * 1.34
+kick_gbp_to_usd$goal = kick_gbp_to_usd$goal * 1.34
+kick_cad_to_usd = kickstarter %>% filter(currency == "CAD")
+kick_cad_to_usd$currency = "USD"
+kick_cad_to_usd$pledged = kick_cad_to_usd$pledged * 0.76
+kick_cad_to_usd$goal = kick_cad_to_usd$goal * 0.76
+kick_mxn_to_usd = kickstarter %>% filter(currency == "MXN")
+kick_mxn_to_usd$currency = "USD"
+kick_mxn_to_usd$pledged = kick_mxn_to_usd$pledged * 0.053
+kick_mxn_to_usd$goal = kick_mxn_to_usd$goal * 0.053
+kick_aud_to_usd = kickstarter %>% filter(currency == "AUD")
+kick_aud_to_usd$currency = "USD"
+kick_aud_to_usd$pledged = kick_aud_to_usd$pledged * 0.69
+kick_aud_to_usd$goal = kick_aud_to_usd$goal * 0.69
+
+kickstarter_usd = kickstarter %>% filter(currency == "USD")
+kickstarter_usd = rbind(kickstarter_usd, kick_euro_to_usd)
+kickstarter_usd = rbind(kickstarter_usd, kick_gbp_to_usd)
+kickstarter_usd = rbind(kickstarter_usd, kick_cad_to_usd)
+kickstarter_usd = rbind(kickstarter_usd, kick_mxn_to_usd)
+kickstarter_usd = rbind(kickstarter_usd, kick_aud_to_usd)
+```
+
+
+```{r, echo = FALSE}
+kickstarter_games = filter(kickstarter_usd, main_category == "Games", goal < 50000)
+kickstarter_games2 = filter(kickstarter_games, category == "Video Games" | category == "Tabletop Games" | category == "Mobile Games" | category == "Playing Cards" | category == "Games" | category == "Live Games")
+
+ggplot()+
+  geom_boxplot(data = kickstarter_games, aes(x = state, y = goal)) +
+  theme_economist() +
+  labs(title = "Зависимость успеха проекта от запрашиваеммой суммы",
+       y = "Запрашиваемая сума",
+       x = "Успех проекта")##медианы отличаются значит делаем т-тест
+
+t.test(goal~state, data = kickstarter_games) ##н0 статистической разницы между спешными и неуспешными проектами нет, н1 разница есть. п-вэлью 2.2е-16 значит мы овтергаем н0 - стат разница есть = закономерность
+
+
+````
+
+
+Количество игровых проектов по странам
+```{r, echo = FALSE}
+g <- ggplot(kickstarter_games2, aes(country))
+g + geom_bar(aes(fill=state), width = 0.5) + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+  labs(title="Количество игровых проектов по странам",
+       y = "Число проектов",
+       x = "Страны")
+
+````
+
+Успех преоктов по категориям
+```{r, echo = FALSE}
+g <- ggplot(kickstarter_games2, aes(category))
+g + geom_bar(aes(fill=state), width = 0.5) + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) +
+  labs(title="Успех проектов по категориям",
+       y = "Число проектов",
+       x = "Категории игр")
+
+chisq.test(kickstarter_games2$category, kickstarter_games2$state) 
+````
+
+```{r, echo = FALSE}
+tree.kick <- rpart(state ~ goal + country + category, method = "class", data = kickstarter_games2)
+prp(tree.kick, cex = 0.9, extra = 4)
+````
+
+
+
+```{r, echo = FALSE}
+pred = predict(tree.kick, type="class")
+```
+
+
+```{r, echo = FALSE}
+t = table(pred, kickstarter_games2$state)
+t
+(t[1,1] + t[2,2])/sum(t)
+
+
+````
+
+
+
+```{r, echo = FALSE}
+no_credit1 = filter(credits_train, Seniority < 2.5 & !(Home %in% c("ignore", "other", "priv", "rent")) & Amount >= 1329)
+table(no_credit1$Status)
+prop.table(table(no_credit1$Status)) 
+
+````
+
+
+
+```{r, echo = FALSE}
+
+
+### Количество игровых проектов по странам
+
+```{r, echo = FALSE}
+g <- ggplot(kickstarter_games2, aes(country)) 
+g + geom_bar(aes(fill=state), width = 0.5) + 
+  theme(axis.text.x = element_text(angle=65, vjust=0.6)) + 
+  labs(title="Количество игровых проектов по странам",
+       y = "Число проектов",
+       x = "Страны")
+
+````
+
